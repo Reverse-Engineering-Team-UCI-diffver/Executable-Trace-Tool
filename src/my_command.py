@@ -1,11 +1,10 @@
 import immlib
 from collections import defaultdict
-
+#
+#   findEndAddr
+#           Find the end address of program, 'cexit'
+#
 imm = immlib.Debugger()
-
-# if a process has spaces, capital letters, or is over 8 characters long it needs to be modified
-# for example, the process "Hello World.exe" appears as "hello_wo" in the assembly code
-
 
 def initStatsKey(stats, oldValue):
     '''Value of the address that is added to the stats dictionary is a list. The list needs to be initialized
@@ -56,32 +55,7 @@ def writeStatfHeader(statfFile):
     statsFile.write("Count")
     statsFile.write("\n")
 
-def main(args):
-    # rawFile =  controlbranch addr : boolean
-	# funcFile = functionaddr
-	# statsFile = percentage of true at each control branch
-	# statfFile = count how many times local function is called
-    rawFile = open('data.txt', 'a')
-    funcFile = open('func.txt', 'a')
-    statsFile = open('stats.txt', 'a')
-    statfFile = open('statf.txt', 'a')
-    
-    files = [rawFile, funcFile, statsFile, statfFile]
-
-    oldValue = ""
-    funcAddr = ""
-    stats = defaultdict(list)
-    funcCount = defaultdict(list)
-
-    # this code block finds the last address in the entire executable. We use it in our while loop to make sure we don't run off the end of the program
-    name=imm.getDebuggedName()
-    module=imm.getModule(name)
-    name = name.split(".")[0]
-    address=module.getBaseAddress()
-    base = address
-    mod_size=module.getCodesize()
-    last_address = address+mod_size
-
+def findEndAddr(imm, address, last_address):
     while(address < last_address) :
         opcode = imm.disasm(address)
         opcode_str = opcode.getDisasm().lower()
@@ -92,14 +66,19 @@ def main(args):
             break
         else :
             address += opcode.getOpSize()
+    return address
 
-
+#
+#   findStartAddr
+#           Find the start address of main function
+#
+def findStartAddr(imm, base, address):
     while(address > base):
         opcode = imm.disasm(address)
         opcode_str = opcode.getDisasm().lower()
 
         if "call" in opcode_str:
-            callmain = address
+            #callmain = address
             startAddr = int(opcode_str.split(".")[1], 16)
             break
         else:
@@ -108,23 +87,36 @@ def main(args):
     if(address > 0x0040FFFF):
         imm.run()
     imm.run(startAddr)
-    address = startAddr
+    return startAddr
+
+#
+#   traceAddr
+#           trace the address line-by-line and search all of branch & CALL instruction
+#           1. branch
+#               compare current address and next address. Next, set the value whether true or false
+#           2.  CALL
+#               find the start address of function and print it
+#
+def traceAddr(imm, address, name, endAddr, stats, oldValue, rawFile, funcFile, funcCount):
     prefixCall = 0
     CBIflag = 0
-
+    stepAddr = 0
+    nextAddr = 0
     while(address != endAddr):
+        #finish searching
         if(address == endAddr):
              imm.quitDebugger()
 
         opcode = imm.disasm(address)
         opcode_str = opcode.getDisasm().lower()
-        #if "call" in opcode_str:
-        #   funcAddr=opcode_str.split(".")[1].upper()
-        #   initFuncCount(funcCount, funcAddr)
+        #if CALL instruction, get the start address of function
         if "call" in opcode_str:
+            #ignore superprefix section
             if(prefixCall == 0):
                 prefixCall = 1
             elif name in opcode_str:
+                #initStatfKey(stats, oldValue)
+                
                 calledAddr = opcode_str.split(".")[1].upper()
                 #imm.log(hex(address).upper() + "   This is call instruction jump to " + calledAddr)
                 funcFile.write(calledAddr)
@@ -132,38 +124,74 @@ def main(args):
                 funcCount[calledAddr][0]+=1
                 imm.stepIn(endAddr)
                 address = imm.getCurrentAddress()
-            else:
-                imm.stepOver(endAddr)
+        #ignore JMP instruction
         elif "jmp" in opcode_str:
              address = int(opcode_str.split(".")[1], 16)
+        #branch instruction search part
         elif ("cmp" in opcode_str) or ("test" in opcode_str):
              imm.stepOver(endAddr)
              address = imm.getCurrentAddress()
              opcode = imm.disasm(address)
              opcode_str = opcode.getDisasm()
              instruct = opcode_str.split(" ")[0]
-        
+            #if branch instruction, check current address and next address
              if "J" in instruct:
                   stepAddr = int(opcode_str.split(".")[1], 16)
                   nextAddr = address + opcode.getOpSize()
                   CBIflag = 1
-
-
         prevAddr = address
         imm.stepOver(endAddr)
         address = imm.getCurrentAddress()
-
+        #determine the branch has true or false
         if(CBIflag):
              CBIflag = 0
              oldValue=hex(prevAddr).upper()
              initStatsKey(stats, oldValue)
-
              if(address == stepAddr):
                  rawFile.write(hex(prevAddr).upper()+":True \n")
                  stats[oldValue][0]+=1
              elif(address == nextAddr):
                  rawFile.write(hex(prevAddr).upper()+":False \n")
                  stats[oldValue][1]+=1
+
+
+
+def main(args):
+    #variable initialize
+    
+    # rawFile =  controlbranch addr : boolean
+	# funcFile = functionaddr
+	# statsFile = percentage of true at each control branch
+	# statfFile = count how many times local function is called
+    rawFile = open('data.txt', 'a')
+    funcFile = open('func.txt', 'a')
+    statsFile = open('stats.txt', 'a')
+    statfFile = open('statf.txt', 'a')
+
+    files = [rawFile, funcFile, statsFile, statfFile]
+
+    oldValue = ""
+    funcAddr = ""
+    stats = defaultdict(list)
+    funcCount = defaultdict(list)
+
+    name=imm.getDebuggedName()
+    module=imm.getModule(name)
+    name = name.split(".")[0]
+    address=module.getBaseAddress()
+    base = address
+    mod_size=module.getCodesize()
+    last_address = address+mod_size
+    
+    #Step 1  -- find 'cexit' address
+    address = findEndAddr(imm, address, last_address)
+    endAddr = address - 1
+
+    #Step 2 -- find start address of main
+    address = findStartAddr(imm, base, address)
+
+    #Step 3 -- get the branch execution and function call results
+    traceAddr(imm, address, name, endAddr, stats, oldValue, rawFile, funcFile, funcCount)
     
     #Write to the statsFile
     writeStatsHeader(statsFile)
@@ -176,5 +204,5 @@ def main(args):
     #Close all files
     for f in files:
         f.close()
-        
+
     return "Search completed!"
