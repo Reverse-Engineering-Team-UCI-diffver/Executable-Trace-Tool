@@ -1,9 +1,6 @@
 import immlib
 from collections import defaultdict
-#
-#   findEndAddr
-#           Find the end address of program, 'cexit'
-#
+
 imm = immlib.Debugger()
 
 def initStatsKey(stats, oldValue):
@@ -22,7 +19,7 @@ def statsForAddr(statsFile, stats, key):
     '''Write to the file the statistic for a particular address'''
     #stats is a dictionary. Key: address. Value: a list with two element. First element contains amount of
     #time it is true. Second element contains amount of time it is false.
-    statsFile.write(hex(long(key))) #Address
+    statsFile.write(str(key)) #Address
     statsFile.write("\t\t")
     trueP = str((float(stats[key][0])/(stats[key][0]+stats[key][1]))*100)
     statsFile.write(trueP.split(".")[0]+"."+trueP.split(".")[1][0]) #Percentage of times it is true
@@ -33,28 +30,32 @@ def statsForAddr(statsFile, stats, key):
 
 def writeStatsHeader(statsFile):
     '''The header for the file statsFile'''
-    statsFile.write("Breakpoint Address")
+    statsFile.write("Branch Address")
     statsFile.write("\t")
     statsFile.write("Percent True")
     statsFile.write("\t")
     statsFile.write("Percent False")
     statsFile.write("\n")
  
-def statsForFunc(statfFile, funcCount, key):
+def statfForFunc(statfFile, funcCount, key):
     '''Write to the file the statistic for a particular address'''
     #stats is a dictionary. Key: address. Value: a list with two element. First element contains amount of
-    statfFile.write(hex(long(key))) #Address
+    statfFile.write(str(key)) #Address
     statfFile.write("\t\t")
-    statfFile.write(funcCount[key][0]) #Count
-    statsFile.write("\n")
+    statfFile.write(str(funcCount[key][0])) #Count
+    statfFile.write("\n")
 
 def writeStatfHeader(statfFile):
     '''The header for the file statfFile'''
-    statsFile.write("Function Address")
-    statsFile.write("\t")
-    statsFile.write("Count")
-    statsFile.write("\n")
+    statfFile.write("Function Address")
+    statfFile.write("\t")
+    statfFile.write("Count")
+    statfFile.write("\n")
 
+#
+#   findEndAddr
+#           Find the end address of program, 'cexit'
+#
 def findEndAddr(imm, address, last_address):
     while(address < last_address) :
         opcode = imm.disasm(address)
@@ -121,6 +122,9 @@ def traceAddr(imm, address, name, endAddr, stats, oldValue, rawFile, funcFile, f
                 #imm.log(hex(address).upper() + "   This is call instruction jump to " + calledAddr)
                 funcFile.write(calledAddr)
                 funcFile.write("\n")
+
+                if calledAddr not in funcCount:
+                    initFuncCount(funcCount, calledAddr)
                 funcCount[calledAddr][0]+=1
                 imm.stepIn(endAddr)
                 address = imm.getCurrentAddress()
