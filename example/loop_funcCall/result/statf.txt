@@ -1,0 +1,3 @@
+Function Address	Count
+004013F4		3
+004013E0		6
