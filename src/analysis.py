@@ -200,20 +200,19 @@ def main(args):
     address=module.getBaseAddress()
     base = address
     
-    #Step 1  -- find 'cexit' address
+    #Step 1  -- Find 'cexit' address
     address = findEndAddr(imm, address)
     endAddr = address - 1
 
-    #Step 2 -- find start address of main
+    #Step 2 -- Find start address of main
     address = findStartAddr(imm, base, address)
 
-    #Step 3 -- get the branch execution and function call results
+    #Step 3 -- Get the branch execution and function call results
     traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCount)
     
-    #Write to the statsFile
+    #Step 4 -- Create the statistics file
     writeStatsHeader(statsFile)
     writeStatfHeader(statfFile)
-
     for key in stats:
         statsForAddr(statsFile, stats, key)
     for key in funcCount:
