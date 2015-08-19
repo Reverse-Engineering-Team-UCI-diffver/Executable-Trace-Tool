@@ -104,8 +104,7 @@ def findStartAddr(imm, base, address):
         else:
             address -= 1
     address = imm.getCurrentAddress()
-    if(address > 0x0040FFFF):
-        imm.run()
+    imm.run()
     imm.run(startAddr)
     return startAddr
 
@@ -178,14 +177,33 @@ def traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCou
                  rawFile.write(hex(prevAddr).upper()+":False \n")
                  stats[oldValue][1]+=1
 
+'''
+    step1. Using our function 'findEndAddr()' to search 'cexit' instruction.
+    step2. Using our function 'findStartAddr()' to search the beginning of the main function in executable file and run to start address.
+    step3. Using 'stepOver()' or 'stepIn()' function from start address to find conditional branch and function call instruction.
+        - If we find the conditional branch instruction, check and write the value of branch instruction in file which name is 'rawFile'
+            and go to next instruction by using the 'stepOver()' function.
+        - If we find the function call instruction, count and write ,that how many times of function call, in file which name is 'funcFile'
+            and go to next instruction by using the 'stepIn()' function.
+        - Iterating this step from start address to end address.
+    step4. Creating the statistics file by using the function 'writeStatsHeader()' and 'writeStatfHeader()'.
+    step5. Closing all files and we create four files 'funcFile', 'rawFile', 'statsFile' and 'statfFile'.
 
+    Note: The 'jmp' instruction is an unconditional jump, so we ignore that instruction in step3.
+    
+    Key Assumptions:
+       
+    Superfluous prefix appear just one time ,so all call instructions after that mean function calls.
+    'Cmp' or 'test' instructions are always in front of conditional branch instructions.
+    The command should be started before run state in immunity debugger.
+'''
 def main(args):
     #variable initialize
     
     # rawFile =  controlbranch addr : boolean
-	# funcFile = functionaddr
-	# statsFile = percentage of true at each control branch
-	# statfFile = count how many times local function is called
+    # funcFile = functionaddr
+    # statsFile = percentage of true at each control branch
+    # statfFile = count how many times local function is called
     rawFile = open('data.txt', 'a')
     funcFile = open('func.txt', 'a')
     statsFile = open('stats.txt', 'a')
