@@ -1,32 +1,34 @@
 import immlib
 from collections import defaultdict
 
+
 imm = immlib.Debugger()
 
-#
-#   initStatsKey
-#           Value of the address that is added to the stats dictionary is a list. 
-#           The list needs to be initialized so that it contains two int that is zero
-# 
+'''
+   initStatsKey()
+           Value of the address that is added to the stats dictionary is a list. 
+           The list needs to be initialized so that it contains two int that is zero
+''' 
 def initStatsKey(stats, oldValue):
     stats[oldValue].append(0)
     stats[oldValue].append(0)
 
-#
-#   initFuncCount
-#           Value of the address that is added to the funcCount dictionary is a list. 
-#           The list needs to be initialized so that it contains two int that is zero
-#   
+'''
+   initFuncCount()
+           Value of the address that is added to the funcCount dictionary is a list. 
+           The list needs to be initialized so that it contains two int that is zero
+'''   
 def initFuncCount(funcCount, funcAddr):
     funcCount[funcAddr].append(0)
     funcCount[funcAddr].append(0)
  
-#
-#   statsForAddr
-#           Write to the file the statistic for a particular address
-#    
+'''
+   statsForAddr()
+           Write to the file the statistic for a particular address
+'''    
 def statsForAddr(statsFile, stats, key):
-    #stats is a dictionary. Key: address. Value: a list with two element. 
+    #stats is a dictionary. 
+    #Key: address. Value: a list with two element. 
     #First element contains amount of time it is true.
     #Second element contains amount of time it is false.
     statsFile.write(str(key)) #Address
@@ -38,10 +40,10 @@ def statsForAddr(statsFile, stats, key):
     statsFile.write(falseP.split(".")[0]+"."+falseP.split(".")[1][0])#Percentage of times it is false
     statsFile.write("\n")
 
-#
-#   writeStatsHeader
-#           The header for the file statsFile
-#
+'''
+   writeStatsHeader()
+           The header for the file statsFile
+'''
 def writeStatsHeader(statsFile):
     statsFile.write("Branch Address")
     statsFile.write("\t")
@@ -50,31 +52,33 @@ def writeStatsHeader(statsFile):
     statsFile.write("Percent False")
     statsFile.write("\n")
  
-#
-#   statfForFunc
-#           Write to the file the statistic for a particular address
-#
+'''
+   statfForFunc()
+           Write to the file the statistic for a particular address 
+'''
 def statfForFunc(statfFile, funcCount, key):
-    #stats is a dictionary. Key: address. Value: a list with two element. First element contains amount of
+    #stats is a dictionary. 
+    #Key: address. Value: a list with two element. 
+    #First element contains count of how many times user function is called.
     statfFile.write(str(key)) #Address
     statfFile.write("\t\t")
     statfFile.write(str(funcCount[key][0])) #Count
     statfFile.write("\n")
 
-#
-#   writeStatfHeader
-#           The header for the file statfFile
-#
+'''
+   writeStatfHeader()
+           The header for the file statfFile
+'''
 def writeStatfHeader(statfFile):
     statfFile.write("Function Address")
     statfFile.write("\t")
     statfFile.write("Count")
     statfFile.write("\n")
 
-#
-#   findEndAddr
-#           Find the end address of program, 'cexit'
-#
+'''
+   findEndAddr()
+           Find the end address of program, 'cexit'
+'''
 def findEndAddr(imm, address):
     while(1) :
         opcode = imm.disasm(address)
@@ -88,10 +92,10 @@ def findEndAddr(imm, address):
             address += opcode.getOpSize()
     return address
 
-#
-#   findStartAddr
-#           Find the start address of main function
-#
+'''
+   findStartAddr()
+           Find the start address of main function
+'''
 def findStartAddr(imm, base, address):
     while(address > base):
         opcode = imm.disasm(address)
@@ -108,30 +112,30 @@ def findStartAddr(imm, base, address):
     imm.run(startAddr)
     return startAddr
 
-#
-#   traceAddr
-#           trace the address line-by-line and search all of branch & CALL instruction
-#           1. branch
-#               compare current address and next address. 
-#               next, set the value whether it is true or false and write file
-#           2.  CALL
-#               find the start address of function and write file
-#
+'''
+   traceAddr()
+           Trace the address line-by-line and search all of branch & CALL instruction
+           1. Branch
+               Compare current address and next address. 
+               Next, set the value whether it is true or false and write file
+           2.  CALL
+               Find the start address of function and write file
+'''
 def traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCount):
     prefixCall = 0
     CBIflag = 0
     stepAddr = 0
     nextAddr = 0
     while(address != endAddr):
-        #finish searching
+        #Finish searching
         if(address == endAddr):
              imm.quitDebugger()
 
         opcode = imm.disasm(address)
         opcode_str = opcode.getDisasm().lower()
-        #if PC points CALL instruction, get the start address of function
+        #If PC points CALL instruction, get the start address of function
         if "call" in opcode_str:
-            #ignore superprefix section
+            #Ignore superprefix section
             if(prefixCall == 0):
                 name = opcode_str.split(".")[0].lower()
                 prefixCall = 1
@@ -145,18 +149,18 @@ def traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCou
                 imm.stepIn(endAddr)
                 address = imm.getCurrentAddress()
 
-        #ignore JMP instruction
+        #Ignore JMP instruction
         elif "jmp" in opcode_str:
              address = int(opcode_str.split(".")[1], 16)
 
-        #branch instruction search part
+        #Searching all control branch instruction
         elif ("cmp" in opcode_str) or ("test" in opcode_str):
              imm.stepOver(endAddr)
              address = imm.getCurrentAddress()
              opcode = imm.disasm(address)
              opcode_str = opcode.getDisasm()
              instruct = opcode_str.split(" ")[0]
-            #if PC points branch instruction, check current address and next address
+            #If PC points to branch instruction, compare current address and next address
              if "J" in instruct:
                   stepAddr = int(opcode_str.split(".")[1], 16)
                   nextAddr = address + opcode.getOpSize()
@@ -165,7 +169,7 @@ def traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCou
         imm.stepOver(endAddr)
         address = imm.getCurrentAddress()
 
-        #determine the branch has true or false
+        #Determine the branch's value whether is true or false
         if(CBIflag):
              CBIflag = 0
              oldValue=hex(prevAddr).upper()
@@ -178,27 +182,30 @@ def traceAddr(imm, address, endAddr, stats, oldValue, rawFile, funcFile, funcCou
                  stats[oldValue][1]+=1
 
 '''
-    step1. Using our function 'findEndAddr()' to search 'cexit' instruction.
-    step2. Using our function 'findStartAddr()' to search the beginning of the main function in executable file and run to start address.
-    step3. Using 'stepOver()' or 'stepIn()' function from start address to find conditional branch and function call instruction.
-        - If we find the conditional branch instruction, check and write the value of branch instruction in file which name is 'rawFile'
-            and go to next instruction by using the 'stepOver()' function.
-        - If we find the function call instruction, count and write ,that how many times of function call, in file which name is 'funcFile'
-            and go to next instruction by using the 'stepIn()' function.
-        - Iterating this step from start address to end address.
-    step4. Creating the statistics file by using the function 'writeStatsHeader()' and 'writeStatfHeader()'.
-    step5. Closing all files and we create four files 'funcFile', 'rawFile', 'statsFile' and 'statfFile'.
+    main()
 
-    Note: The 'jmp' instruction is an unconditional jump, so we ignore that instruction in step3.
+        Step1. Using our function 'findEndAddr()' to search 'cexit' instruction.
+        Step2. Using our function 'findStartAddr()' to search the begginning of the main function in executable file and run to start address.
+        Step3. Using 'stepOver()' or 'stepIn()' function from start address to find conditional branch and function call instruction.
+            - If we find the conditional branch instruction, check and write the value of branch instruction in file which name is 'rawFile'
+              and go to next instruction by using the 'stepOver()' function.
+            - If we find the function call instruction, count and write ,that how many times of function call, in file which name is 'funcFile'
+              and go to next instruction by using the 'stepIn()' function.
+            - Iterating this step from start address to end address.
+        Step4. Creating the statistics file by using the function 'writeStatsHeader()' and 'writeStatfHeader()'.
+        Step5. Closing all files and we create four files 'funcFile', 'rawFile', 'statsFile' and 'statfFile'.
+
+        Note: The 'jmp' instruction is an unconditional jump, so we ignore that instruction in step3.
     
-    Key Assumptions:
+        Key Assumptions:
        
-    Superfluous prefix appear just one time ,so all call instructions after that mean function calls.
-    'Cmp' or 'test' instructions are always in front of conditional branch instructions.
-    The command should be started before run state in immunity debugger.
+            Superfluous prefix appear just one time ,so all call instructions after that mean function calls.
+            'Cmp' or 'test' instructions are always in front of conditional branch instructions.
+            The command should be started before run state in immunity debugger.
 '''
 def main(args):
-    #variable initialize
+    
+    #Initializing variables 
     
     # rawFile =  controlbranch addr : boolean
     # funcFile = functionaddr
@@ -218,7 +225,7 @@ def main(args):
     address=module.getBaseAddress()
     base = address
     
-    #Step 1  -- Find 'cexit' address
+    #Step 1 -- Find 'cexit' address
     address = findEndAddr(imm, address)
     endAddr = address - 1
 
