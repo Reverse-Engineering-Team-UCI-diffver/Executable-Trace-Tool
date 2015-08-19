@@ -24,12 +24,10 @@ Instruction
 +   Run "!analysis" inside Immunity Debugger's prompt before run state in immunity debugger.  
 +   Step1. Using our function 'findEndAddr()' to search 'cexit' instruction.
 +   Step2. Using our function 'findStartAddr()' to search the beginning of the main function in executable file and run to start address.
-+   Step3. Using 'stepOver()' or 'stepIn()' function from start address to find conditional branch and function call instruction.
-+        - If we find the conditional branch instruction, check and write the value of branch instruction in file which name is 'rawFile'
-+            and go to next instruction by using the 'stepOver()' function.
-+        - If we find the function call instruction, count and write ,that how many times of function call, in file which name is 'funcFile'
-+            and go to next instruction by using the 'stepIn()' function.
-+        - Iterating this step from start address to end address.
++   Step3. Using 'stepOver()' or 'stepIn()' function to find conditional branch and function call instruction from start address to end of main.
+   - If we find the conditional branch instruction, check and write the value of branch instruction in file which name is 'rawFile  and go to next instruction by using the 'stepOver()' function.
+   - If we find the function call instruction, count and write ,that how many times of function call, in file which name is 'funcFile' and go to next instruction by using the 'stepIn()' function.
+   - Iterating this step from start address to end address.
 +   Step4. Creating the statistics file by using the function 'writeStatsHeader()' and 'writeStatfHeader()'.
 +   Step5. Closing all files and we create four files 'funcFile', 'rawFile', 'statsFile' and 'statfFile' inside the Immunity Debugger folder.
 
